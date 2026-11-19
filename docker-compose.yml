@@ -1,0 +1,48 @@
+# NOTE: written for you but not executed in the sandbox where this project was built (no Docker there).
+# If something fails, read the container logs:  docker compose logs <service>
+services:
+  db:
+    image: postgres:16
+    environment:
+      { POSTGRES_USER: spend, POSTGRES_PASSWORD: spend, POSTGRES_DB: spendwise }
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      {
+        test: ["CMD-SHELL", "pg_isready -U spend -d spendwise"],
+        interval: 5s,
+        retries: 10,
+      }
+
+  redis:
+    image: redis:7
+    healthcheck:
+      { test: ["CMD", "redis-cli", "ping"], interval: 5s, retries: 10 }
+
+  api:
+    build: .
+    command: sh -c "python scripts/bootstrap.py && uvicorn backend.app.main:app --host 0.0.0.0 --port 8000"
+    env_file: .env.example
+    volumes: ["./data:/app/data", "./ml/saved_models:/app/ml/saved_models"]
+    ports: ["8000:8000"]
+    depends_on:
+      {
+        db: { condition: service_healthy },
+        redis: { condition: service_healthy },
+      }
+
+  worker:
+    build: .
+    command: sh -c "sleep 15 && celery -A backend.app.workers.celery_app.celery_app worker --loglevel=info --concurrency=2"
+    env_file: .env.example
+    volumes: ["./data:/app/data", "./ml/saved_models:/app/ml/saved_models"]
+    depends_on: [api]
+
+  dashboard:
+    build: .
+    command: streamlit run dashboard/app.py --server.port 8501 --server.address 0.0.0.0
+    environment: { API_URL: "http://api:8000" }
+    ports: ["8501:8501"]
+    depends_on: [api]
+
+volumes:
+  pgdata:

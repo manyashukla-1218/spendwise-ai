@@ -1,0 +1,9 @@
+.env
+__pycache__/
+*.pyc
+*.db
+data/uploads/*
+!data/uploads/.gitkeep
+ml/saved_models/*
+!ml/saved_models/.gitkeep
+.pytest_cache/
