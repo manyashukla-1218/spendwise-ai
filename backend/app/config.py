@@ -5,6 +5,14 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parents[2]
 
+# Load a local .env file (git-ignored) if present, e.g. LLM_API_KEY=... Real environment variables win.
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv(BASE_DIR / ".env")
+except ImportError:  # python-dotenv optional
+    pass
+
 DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{BASE_DIR / 'spendwise.db'}")
 REDIS_URL = os.getenv("REDIS_URL", "")
 USE_CELERY = os.getenv("USE_CELERY", "false").lower() == "true"

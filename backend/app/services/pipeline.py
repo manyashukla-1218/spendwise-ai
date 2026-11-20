@@ -53,6 +53,8 @@ def process_upload(upload_id: int):
     t0 = time.time()
     try:
         up.status = "processing"
+        # idempotent re-processing: a retried job replaces its own earlier rows instead of duplicating them
+        db.query(Transaction).filter(Transaction.upload_id == up.id).delete()
         db.commit()
         df = pd.read_csv(
             config.UPLOAD_DIR / f"{upload_id}.csv", dtype=str, keep_default_na=False
@@ -104,7 +106,12 @@ def process_upload(upload_id: int):
             )
         )
         db.commit()
-        bump_version(up.tenant_id)
+        try:
+            bump_version(up.tenant_id)
+        except (
+            Exception
+        ) as e:  # noqa  (a cache problem must never fail an ingested upload)
+            print(f"[pipeline] cache invalidation failed: {e}")
     except Exception as e:  # noqa
         db.rollback()
         up = db.get(Upload, upload_id)

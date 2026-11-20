@@ -49,7 +49,8 @@ class RedisCache:
         return json.loads(v) if v is not None else None
 
     def set(self, key, val, ttl=300):
-        self.r.set(key, json.dumps(val, default=str), ex=ttl)
+        # ttl=0/None means "no expiry" (Redis rejects EX 0)
+        self.r.set(key, json.dumps(val, default=str), ex=ttl if ttl else None)
 
     def incr(self, key, ttl=60):
         n = self.r.incr(key)

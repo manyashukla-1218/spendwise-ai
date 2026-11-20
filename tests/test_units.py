@@ -66,3 +66,13 @@ def test_vague_items_are_not_flagged_as_anomalies():
     df["amount"] = df["unit_price"] * df["quantity"]
     out = anomaly.detect(df)
     assert not out.loc[out["item"] == "misc purchase", "is_anomaly"].any()
+
+
+def test_cache_version_bump_and_zero_ttl():
+    from backend.app.cache import bump_version, cache, tenant_version
+
+    v = tenant_version("t-x")
+    bump_version("t-x")  # uses ttl=0 ("no expiry"); Redis used to reject this
+    assert tenant_version("t-x") == v + 1
+    cache.set("k-ttl0", {"a": 1}, ttl=0)
+    assert cache.get("k-ttl0") == {"a": 1}

@@ -2,7 +2,7 @@
 
 **AI-powered procurement spend intelligence: clean messy purchase data, resolve duplicate suppliers, classify spend with confidence scores, keep a human in the loop, and surface savings and anomalies.**
 
-![Python](https://img.shields.io/badge/Python-3.12-blue) ![FastAPI](https://img.shields.io/badge/FastAPI-backend-009688) ![scikit-learn](https://img.shields.io/badge/scikit--learn-ML-orange) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-ready-336791) ![Redis](https://img.shields.io/badge/Redis-cache%20%2B%20queue-red) ![Tests](https://img.shields.io/badge/tests-9%20passing-brightgreen)
+![Python](https://img.shields.io/badge/Python-3.12-blue) ![FastAPI](https://img.shields.io/badge/FastAPI-backend-009688) ![scikit-learn](https://img.shields.io/badge/scikit--learn-ML-orange) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-ready-336791) ![Redis](https://img.shields.io/badge/Redis-cache%20%2B%20queue-red) ![Tests](https://img.shields.io/badge/tests-10%20passing-brightgreen)
 
 > An independent educational project inspired by publicly described spend-analytics concepts (supplier normalization, AI classification, price variance, tail spend).
 > **All data is synthetic. No real company data is used, and the project is not affiliated with any commercial vendor.**
@@ -117,19 +117,22 @@ Demo API keys (header `X-API-Key`): `demo-acme-key`, `demo-nova-key`, `demo-orbi
 ### Full stack with Docker (PostgreSQL + Redis + Celery worker)
 
 ```bash
-docker compose up --build        # API :8000, dashboard :8501
+docker compose up --build        # dashboard http://localhost:8501 , API docs http://localhost:8000/docs
 ```
 
-> `docker-compose.yml` is provided but I have not verified it end-to-end yet; check `docker compose logs <service>` if something fails.
+Starts PostgreSQL 16, Redis 7, the API, a Celery worker and the dashboard (health-checked start order). Check `http://localhost:8000/health`: it should report `"cache": "redis", "queue": "celery"`.
+
+**Verification status (honest):** the same stack (PostgreSQL 16 + Redis + Celery with 2 workers) was tested end-to-end _outside_ containers; the container build/run itself (`Dockerfile`, `docker-compose.yml`) has not been executed yet, so check `docker compose logs <service>` if something fails.
 
 ### Copilot with a free LLM key
 
-```powershell
-$env:LLM_API_KEY="your_key"      # Groq or Google AI Studio; optionally LLM_BASE_URL and LLM_MODEL
-python -m uvicorn backend.app.main:app --port 8000
+Create a file named `.env` in the project root (it is git-ignored, so the key is never uploaded):
+
+```
+LLM_API_KEY=your_key_here
 ```
 
-Without a key the copilot falls back to a rule-based router that calls the same tools. **Never commit API keys.**
+It is loaded automatically for local runs and passed through by `docker compose`. (You can also set it per terminal with `$env:LLM_API_KEY="..."`.) Optional: `LLM_BASE_URL` / `LLM_MODEL` for other OpenAI-compatible providers; tested with a free Groq key. Without a key the copilot falls back to a rule-based router that calls the same tools. **Never commit API keys.**
 
 ## 🔌 API overview
 
@@ -162,9 +165,23 @@ Measured on my laptop (Windows, Python 3.12, SQLite, in-memory cache, single pro
 | Price-variance savings estimate                                             | **₹160.4 M** (≈9% of total spend; driven by the supplier price spread built into the synthetic data)                                                                                                     |
 | Tail spend                                                                  | 66 of 112 suppliers (58.9%) account for 19.95% of spend                                                                                                                                                  |
 | Retraining demo                                                             | 11 reviewer corrections → new model version, base hold-out accuracy 93.19% (macro-F1 0.9336); 0 pending items auto-resolved. Shows the feedback loop works end-to-end; it is not a claimed accuracy gain |
-| Automated tests                                                             | **9 passing** (cleaning, name normalization, anomaly detection incl. vague-item exclusion, upload flow, idempotency, tenant isolation, review + retrain, copilot)                                        |
+| Automated tests                                                             | **10 passing** (cleaning, name normalization, anomaly detection incl. vague-item exclusion, cache TTL handling, upload flow, idempotency, tenant isolation, review + retrain, copilot)                   |
 
 Reproduce with `python -m pytest tests -q` and `python scripts/benchmark.py`.
+
+### Full-stack validation (PostgreSQL 16 + Redis + Celery, build sandbox on Linux)
+
+Run outside containers with 2 Celery workers, using the same code and settings as the Docker setup:
+
+| Check                                               | Result                                                                                  |
+| --------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| Two tenants uploading at once (10,000 + 8,000 rows) | both jobs `done`, processed in parallel in ~5.9 s wall time                             |
+| Duplicate upload of the same file                   | detected, not re-processed                                                              |
+| Tenant isolation                                    | other tenants see 0 rows; cross-tenant job lookup returns 404                           |
+| Redis cache-aside (price-variance analytics)        | ~93 ms first call → ~5 ms cached                                                        |
+| Rate limiting (120 requests / minute / tenant)      | requests above the limit get HTTP 429                                                   |
+| Human review → retrain → supplier merge             | all succeeded                                                                           |
+| Bug found only on real Redis/Postgres               | Redis rejects `SET … EX 0`; fixed (`ttl=0` now means "no expiry") and covered by a test |
 
 ## ⚠️ Honest limitations
 
@@ -177,6 +194,8 @@ Reproduce with `python -m pytest tests -q` and `python scripts/benchmark.py`.
 - Not implemented: role-based access control, embeddings/RAG, public deployment.
 
 ## 🗺️ Roadmap
+
+Detailed plan to production-style (CI, migrations, auth/RBAC, observability, load tests, ML rigor): [`docs/production-roadmap.md`](docs/production-roadmap.md)
 
 - [ ] Embedding-based classification and supplier matching (compare against TF-IDF with measured metrics)
 - [ ] RBAC (admin / analyst / viewer) and per-user audit trail
@@ -199,7 +218,7 @@ spendwise-ai/
 ├── dashboard/app.py  Streamlit UI
 ├── scripts/          generate_data.py · bootstrap.py · benchmark.py
 ├── tests/            pytest suite
-├── docs/             architecture.md + images/
+├── docs/             architecture.md · production-roadmap.md · images/
 ├── docker-compose.yml · Dockerfile · requirements.txt
 └── data/generated/   synthetic CSVs (created by generate_data.py)
 ```
