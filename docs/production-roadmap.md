@@ -1,4 +1,4 @@
-# Path from "advanced portfolio project" to production-style
+# Production Roadmap
 
 Honest baseline: the app already has async ingestion, idempotency, multi-tenancy, caching, rate limiting, human-in-the-loop
 retraining and a tool-calling copilot, validated on PostgreSQL + Redis + Celery. What separates it from production is
