@@ -6,9 +6,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 _tmp = tempfile.mkdtemp()
-os.environ["DATABASE_URL"] = f"sqlite:///{_tmp}/test.db"
+os.environ["DATABASE_URL"] = os.getenv("TEST_DATABASE_URL", f"sqlite:///{_tmp}/test.db")
 os.environ["UPLOAD_DIR"] = f"{_tmp}/uploads"
-os.environ["REDIS_URL"] = ""
+os.environ["REDIS_URL"] = os.getenv("TEST_REDIS_URL", "")
 os.environ["MODEL_DIR"] = f"{_tmp}/models"
 os.environ["TRAIN_FILE"] = str(ROOT / "data" / "generated" / "train_labeled.csv")
 os.environ["USE_CELERY"] = "false"
