@@ -2,7 +2,7 @@
 
 **AI-powered procurement spend intelligence: clean messy purchase data, resolve duplicate suppliers, classify spend with confidence scores, keep a human in the loop, and surface savings and anomalies.**
 
-![Python](https://img.shields.io/badge/Python-3.12-blue) ![FastAPI](https://img.shields.io/badge/FastAPI-backend-009688) ![scikit-learn](https://img.shields.io/badge/scikit--learn-ML-orange) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-ready-336791) ![Redis](https://img.shields.io/badge/Redis-cache%20%2B%20queue-red) ![Tests](https://img.shields.io/badge/tests-10%20passing-brightgreen)
+![Python](https://img.shields.io/badge/Python-3.12-blue) ![FastAPI](https://img.shields.io/badge/FastAPI-backend-009688) ![scikit-learn](https://img.shields.io/badge/scikit--learn-ML-orange) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-ready-336791) ![Redis](https://img.shields.io/badge/Redis-cache%20%2B%20queue-red) ![CI](https://github.com/manyashukla-1218/spendwise-ai/actions/workflows/ci.yml/badge.svg)
 
 > An independent educational project inspired by publicly described spend-analytics concepts (supplier normalization, AI classification, price variance, tail spend).
 > **All data is synthetic. No real company data is used, and the project is not affiliated with any commercial vendor.**
@@ -165,7 +165,7 @@ Measured on my laptop (Windows, Python 3.12, SQLite, in-memory cache, single pro
 | Price-variance savings estimate                                             | **₹160.4 M** (≈9% of total spend; driven by the supplier price spread built into the synthetic data)                                                                                                     |
 | Tail spend                                                                  | 66 of 112 suppliers (58.9%) account for 19.95% of spend                                                                                                                                                  |
 | Retraining demo                                                             | 11 reviewer corrections → new model version, base hold-out accuracy 93.19% (macro-F1 0.9336); 0 pending items auto-resolved. Shows the feedback loop works end-to-end; it is not a claimed accuracy gain |
-| Automated tests                                                             | **10 passing** (cleaning, name normalization, anomaly detection incl. vague-item exclusion, cache TTL handling, upload flow, idempotency, tenant isolation, review + retrain, copilot)                   |
+| Automated tests                                                             | **14 passing** (cleaning, name normalization, anomaly detection incl. vague-item exclusion, cache TTL handling, upload flow, idempotency, tenant isolation, review + retrain, copilot)                   |
 
 Reproduce with `python -m pytest tests -q` and `python scripts/benchmark.py`.
 
@@ -218,6 +218,7 @@ spendwise-ai/
 ├── dashboard/app.py  Streamlit UI
 ├── scripts/          generate_data.py · bootstrap.py · benchmark.py
 ├── tests/            pytest suite
+├── migrations/       Alembic schema migrations
 ├── docs/             architecture.md · production-roadmap.md · images/
 ├── docker-compose.yml · Dockerfile · requirements.txt
 └── data/generated/   synthetic CSVs (created by generate_data.py)
@@ -226,6 +227,8 @@ spendwise-ai/
 ## 🗄️ Database
 
 `tenants` · `uploads` (unique tenant + file hash) · `suppliers` · `supplier_matches` · `transactions` (indexed on tenant + category / supplier / review status / date) · `feedback` · `model_versions` · `audit_logs`
+
+The schema is versioned with Alembic (`migrations/`) and applied automatically on start-up. After changing `models.py`, run `python -m alembic revision --autogenerate -m "describe change"`; a test fails if models and migrations drift apart.
 
 ## 📄 License & data note
 
