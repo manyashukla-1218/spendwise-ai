@@ -1,9 +1,20 @@
 # Production Roadmap
 
-Honest baseline: the app already has async ingestion, idempotency, multi-tenancy, caching, rate limiting, human-in-the-loop
+Current state: the app already has async ingestion, idempotency, multi-tenancy, caching, rate limiting, human-in-the-loop
 retraining and a tool-calling copilot, validated on PostgreSQL + Redis + Celery. What separates it from production is
 mostly **reliability, security, observability, ML rigor and delivery**, listed below in priority order
 (impact for the effort, roughly 1-2 days each).
+
+## Progress
+
+- [x] 1. CI with GitHub Actions (tests on real PostgreSQL + Redis, lint, docker build)
+- [x] 2. Alembic migrations (applied at start-up, drift-checked in tests)
+- [ ] 3. Auth + RBAC
+- [ ] 4. Observability
+- [ ] 5. Load test with published numbers
+- [ ] 6. ML rigor
+- [ ] 7. Row-level security
+- [ ] 8. Free-tier deployment
 
 | #   | Upgrade                                                                                                                                                                                | What it adds                                                | Why it matters                                                                  |
 | --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------- |
