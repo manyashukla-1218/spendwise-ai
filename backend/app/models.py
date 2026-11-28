@@ -11,7 +11,31 @@ class Tenant(Base):
     __tablename__ = "tenants"
     id = Column(String(40), primary_key=True)
     name = Column(String(200), nullable=False)
-    api_key = Column(String(100), unique=True, nullable=False, index=True)
+
+
+class User(Base):
+    __tablename__ = "users"
+    id = Column(Integer, primary_key=True)
+    tenant_id = Column(String(40), ForeignKey("tenants.id"), nullable=False, index=True)
+    email = Column(String(200), unique=True, nullable=False, index=True)
+    password_hash = Column(String(300), nullable=False)          # scrypt, never the password itself
+    role = Column(String(20), nullable=False)                    # viewer | analyst | admin
+    is_active = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class ApiKey(Base):
+    """Machine credentials. Only a SHA-256 hash is stored; the key itself is shown once at creation."""
+    __tablename__ = "api_keys"
+    id = Column(Integer, primary_key=True)
+    tenant_id = Column(String(40), ForeignKey("tenants.id"), nullable=False, index=True)
+    name = Column(String(100), nullable=False)
+    prefix = Column(String(16), nullable=False)                  # first characters, for identification only
+    key_hash = Column(String(64), unique=True, nullable=False, index=True)
+    role = Column(String(20), nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    last_used_at = Column(DateTime)
 
 
 class Upload(Base):
@@ -109,6 +133,7 @@ class AuditLog(Base):
     __tablename__ = "audit_logs"
     id = Column(Integer, primary_key=True)
     tenant_id = Column(String(40), index=True)
+    actor = Column(String(200))                                  # who did it (user email or key name)
     action = Column(String(100))
     detail = Column(Text)
     created_at = Column(DateTime, default=datetime.utcnow)

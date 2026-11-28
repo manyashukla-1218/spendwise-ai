@@ -134,6 +134,12 @@ LLM_API_KEY=your_key_here
 
 It is loaded automatically for local runs and passed through by `docker compose`. (You can also set it per terminal with `$env:LLM_API_KEY="..."`.) Optional: `LLM_BASE_URL` / `LLM_MODEL` for other OpenAI-compatible providers; tested with a free Groq key. Without a key the copilot falls back to a rule-based router that calls the same tools. **Never commit API keys.**
 
+## 🔐 Security and access control
+
+Login with email + password (JWT) or use hashed API keys; three roles (viewer, analyst, admin) are enforced on every endpoint, and all actions are written to an audit log with the actor. Full model and production checklist: [`docs/security.md`](docs/security.md).
+
+Demo accounts (synthetic data, only when `SEED_DEMO=true`): `admin@acme.demo`, `analyst@acme.demo`, `viewer@acme.demo` (same pattern for `nova` and `orbit`), password `demo-pass-123`.
+
 ## 🔌 API overview
 
 | Method   | Endpoint                                                                  | Purpose                                    |

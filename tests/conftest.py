@@ -12,6 +12,8 @@ os.environ["REDIS_URL"] = os.getenv("TEST_REDIS_URL", "")
 os.environ["MODEL_DIR"] = f"{_tmp}/models"
 os.environ["TRAIN_FILE"] = str(ROOT / "data" / "generated" / "train_labeled.csv")
 os.environ["USE_CELERY"] = "false"
+os.environ["RATE_LIMIT_PER_MIN"] = "100000"  # dedicated test lowers it where needed
+os.environ["SEED_DEMO"] = "true"
 os.environ["LLM_API_KEY"] = ""
 
 import pytest  # noqa: E402

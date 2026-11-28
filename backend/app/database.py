@@ -23,8 +23,7 @@ def get_db():
 
 def run_migrations(url: str | None = None):
     """Bring the database schema to the latest Alembic revision.
-    A database created earlier by `create_all` (no alembic_version table) is adopted ("stamped") instead of re-created.
-    """
+    A database created earlier by `create_all` (no alembic_version table) is adopted ("stamped") instead of re-created."""
     from alembic import command
     from alembic.config import Config
     from sqlalchemy import inspect
@@ -45,15 +44,28 @@ def run_migrations(url: str | None = None):
 
 
 def init_db():
-    """Apply migrations and seed demo tenants."""
+    """Apply migrations; create tenants and, if SEED_DEMO is on, demo users and demo API keys."""
     from . import models
+    from .security import hash_api_key, hash_password
 
     run_migrations()
     db = SessionLocal()
     try:
-        for tid, name, key in config.DEMO_TENANTS:
-            if not db.get(models.Tenant, tid):
-                db.add(models.Tenant(id=tid, name=name, api_key=key))
-        db.commit()
+        if config.SEED_DEMO:
+            for tid, name, key in config.DEMO_TENANTS:
+                if not db.get(models.Tenant, tid):
+                    db.add(models.Tenant(id=tid, name=name))
+            db.commit()
+            pw_hash = None
+            for tid, name, key in config.DEMO_TENANTS:
+                if not db.query(models.ApiKey).filter_by(key_hash=hash_api_key(key)).first():
+                    db.add(models.ApiKey(tenant_id=tid, name="demo-admin-key", prefix=key[:10],
+                                         key_hash=hash_api_key(key), role="admin"))
+                for role in ("admin", "analyst", "viewer"):
+                    email = f"{role}@{tid}.demo"
+                    if not db.query(models.User).filter_by(email=email).first():
+                        pw_hash = pw_hash or hash_password(config.DEMO_USER_PASSWORD)
+                        db.add(models.User(tenant_id=tid, email=email, password_hash=pw_hash, role=role))
+            db.commit()
     finally:
         db.close()

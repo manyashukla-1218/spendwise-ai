@@ -8,24 +8,20 @@ x-app-env: &app-env
   LLM_API_KEY: ${LLM_API_KEY:-}
   LLM_BASE_URL: ${LLM_BASE_URL:-https://api.groq.com/openai/v1}
   LLM_MODEL: ${LLM_MODEL:-openai/gpt-oss-120b}
+  APP_ENV: ${APP_ENV:-dev}                                   # production refuses demo users and a default JWT_SECRET
+  JWT_SECRET: ${JWT_SECRET:-dev-insecure-secret-change-me}
+  SEED_DEMO: ${SEED_DEMO:-true}
 
 services:
   db:
     image: postgres:16
-    environment:
-      { POSTGRES_USER: spend, POSTGRES_PASSWORD: spend, POSTGRES_DB: spendwise }
+    environment: {POSTGRES_USER: spend, POSTGRES_PASSWORD: spend, POSTGRES_DB: spendwise}
     volumes: [pgdata:/var/lib/postgresql/data]
-    healthcheck:
-      {
-        test: ["CMD-SHELL", "pg_isready -U spend -d spendwise"],
-        interval: 5s,
-        retries: 10,
-      }
+    healthcheck: {test: ["CMD-SHELL", "pg_isready -U spend -d spendwise"], interval: 5s, retries: 10}
 
   redis:
     image: redis:7
-    healthcheck:
-      { test: ["CMD", "redis-cli", "ping"], interval: 5s, retries: 10 }
+    healthcheck: {test: ["CMD", "redis-cli", "ping"], interval: 5s, retries: 10}
 
   api:
     build: .
@@ -33,19 +29,9 @@ services:
     environment: *app-env
     volumes: ["./data:/app/data", "./ml/saved_models:/app/ml/saved_models"]
     ports: ["8000:8000"]
-    depends_on:
-      {
-        db: { condition: service_healthy },
-        redis: { condition: service_healthy },
-      }
+    depends_on: {db: {condition: service_healthy}, redis: {condition: service_healthy}}
     healthcheck:
-      test:
-        [
-          "CMD",
-          "python",
-          "-c",
-          "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')",
-        ]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 10s
       retries: 18
       start_period: 40s
@@ -55,14 +41,14 @@ services:
     command: celery -A backend.app.workers.celery_app.celery_app worker --loglevel=info --concurrency=2
     environment: *app-env
     volumes: ["./data:/app/data", "./ml/saved_models:/app/ml/saved_models"]
-    depends_on: { api: { condition: service_healthy } }
+    depends_on: {api: {condition: service_healthy}}
 
   dashboard:
     build: .
     command: streamlit run dashboard/app.py --server.port 8501 --server.address 0.0.0.0
-    environment: { API_URL: "http://api:8000" }
+    environment: {API_URL: "http://api:8000"}
     ports: ["8501:8501"]
-    depends_on: { api: { condition: service_healthy } }
+    depends_on: {api: {condition: service_healthy}}
 
 volumes:
   pgdata:
